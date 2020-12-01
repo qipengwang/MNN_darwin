@@ -248,7 +248,8 @@ public:
         auto input = inputs[0];
         auto& option = mParameter.option;
         if (getIsTraining()) {
-            auto tempOutput = _Conv(mParameter.weight, mParameter.bias, _Convert(input, NC4HW4), option.padMode, option.stride, option.dilate, mParameter.group, mParameter.option.pads);
+            auto tempOutput = _Conv(mParameter.weight, mParameter.bias, _Convert(input, NC4HW4),
+                                    option.padMode, option.stride, option.dilate, mParameter.group, mParameter.option.pads);
             tempOutput->setName(name());
             tempOutput = _activate(tempOutput, option.fusedActivationFunction);
             return {tempOutput};
@@ -270,7 +271,9 @@ public:
                 ::memset(bias.data(), 0, bias.size() * sizeof(float));
             }
         }
-        auto tempOutput = _Conv(std::move(weight), std::move(bias), _Convert(input, NC4HW4), option.channel, option.kernelSize, option.padMode, option.stride, option.dilate, mParameter.group, mParameter.option.pads, relu, relu6);
+        auto tempOutput = _Conv(std::move(weight), std::move(bias), _Convert(input, NC4HW4),
+                                option.channel, option.kernelSize, option.padMode, option.stride, option.dilate,
+                                mParameter.group, mParameter.option.pads, relu, relu6);
         tempOutput->setName(name());
         return {tempOutput};
     }
@@ -323,7 +326,8 @@ static std::tuple<VARP, VARP, int> _initParameters(const NN::ConvOption& option,
 
 Module* NN::ConvTranspose(const ConvOption& option, bool hasBias,
                                           std::shared_ptr<Initializer> weightInit,
-                                          std::shared_ptr<Initializer> biasInit) {
+                                          std::shared_ptr<Initializer> biasInit,
+                                          std::string name) {
     VARP input  = _Input({1, option.channel[0], 1, 1}, NC4HW4);
     auto tuple  = _initParameters(option, hasBias, weightInit, biasInit);
     auto weight = std::get<0>(tuple);
@@ -346,7 +350,7 @@ Module* NN::ConvTranspose(const ConvOption& option, bool hasBias,
     return new FixModule({tempOutput}, {weight}, {{input, NC4HW4}});
 }
 Module* NN::Conv(const ConvOption& option, bool hasBias, std::shared_ptr<Initializer> weightInit,
-                                 std::shared_ptr<Initializer> biasInit) {
+                                 std::shared_ptr<Initializer> biasInit, std::string name) {
     auto tuple  = _initParameters(option, hasBias, weightInit, biasInit);
     ConvParameters parameters;
     parameters.weight = std::get<0>(tuple);
@@ -360,7 +364,7 @@ Module* NN::Conv(const ConvOption& option, bool hasBias, std::shared_ptr<Initial
 }
 
 Module* NN::Linear(int l, int t, bool hasBias, std::shared_ptr<Initializer> weightInit,
-                                   std::shared_ptr<Initializer> biasInit) {
+                                   std::shared_ptr<Initializer> biasInit, std::string name) {
     if (nullptr == weightInit) {
         weightInit.reset(Initializer::xavier());
     }
@@ -382,11 +386,11 @@ Module* NN::Linear(int l, int t, bool hasBias, std::shared_ptr<Initializer> weig
     return module;
 }
 
-Module* NN::Dropout(const float dropRatio) {
+Module* NN::Dropout(const float dropRatio, std::string name) {
     return new DropoutModule(dropRatio);
 }
 
-Module* NN::BatchNorm(const int channels, const int dims, const float m, const float e) {
+Module* NN::BatchNorm(const int channels, const int dims, const float m, const float e, std::string name) {
     return new BatchNormModule(channels, dims, m, e);
 }
 
@@ -600,12 +604,12 @@ private:
     int mGroup;
 };
 
-Module* NN::Conv(const ConvParameters& parameter) {
+Module* NN::Conv(const ConvParameters& parameter, std::string name) {
     return new ConvModule(parameter);
 }
 
 Module* NN::ConvOctave(const ConvParameters& parameters,
-                                       float inFactor, float outFactor) {
+                                       float inFactor, float outFactor, std::string name) {
     auto module = new ConvOctaveModule(parameters.option, parameters.weight, parameters.bias, parameters.group, inFactor, outFactor);
     module->setName(parameters.name);
     return module;
@@ -924,16 +928,19 @@ private:
 
 Module* NN::ConvBNReluFused(std::vector<std::shared_ptr<Module> > modules,
                                             NN::FeatureScaleStatMethod featureScaleStatMethod,
-                                            NN::ScaleUpdateMethod scaleUpdateMethod, const int bits) {
+                                            NN::ScaleUpdateMethod scaleUpdateMethod, const int bits,
+                                            std::string name) {
     return new ConvBNReluFusedModule(modules, featureScaleStatMethod, scaleUpdateMethod, bits);
 }
 
 Module* NN::ConvInt8(const ConvOption& option, int bits, bool hasBias,
-                                     std::shared_ptr<Initializer> weightInit, std::shared_ptr<Initializer> biasInit, NN::FeatureScaleStatMethod featureMethod, NN::ScaleUpdateMethod method) {
+                                     std::shared_ptr<Initializer> weightInit, std::shared_ptr<Initializer> biasInit,
+                                     NN::FeatureScaleStatMethod featureMethod, NN::ScaleUpdateMethod method,
+                                     std::string name) {
     std::shared_ptr<Module> conv(NN::Conv(option));
     return new ConvBNReluFusedModule({conv}, featureMethod, method, bits);
 }
-Module* NN::ConvInt8(const ConvParameters& para, int bits, NN::FeatureScaleStatMethod featureMethod, NN::ScaleUpdateMethod method) {
+Module* NN::ConvInt8(const ConvParameters& para, int bits, NN::FeatureScaleStatMethod featureMethod, NN::ScaleUpdateMethod method, std::string name) {
     std::shared_ptr<Module> conv(NN::Conv(para));
     return new ConvBNReluFusedModule({conv}, featureMethod, method, bits);
 }

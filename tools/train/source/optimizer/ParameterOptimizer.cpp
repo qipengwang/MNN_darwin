@@ -49,14 +49,16 @@ ParameterOptimizer* ParameterOptimizer::createADAM(std::shared_ptr<Module> modul
 }
 
 bool ParameterOptimizer::step(Express::VARP loss) {
+    MNN_PRINT("call %s in %s in line %d\n", __FUNCTION__, __FILE_NAME__, __LINE__);
     mStep++;
     auto res = this->onGetNextParameter(loss);
     for (auto iter : res) {
         iter.second.fix(Express::VARP::TRAINABLE);
-    }
-    for (auto iter : res) {
         iter.first->input(iter.second);
     }
+//    for (auto iter : res) {
+//        iter.first->input(iter.second);
+//    }
     return !res.empty();
 }
 

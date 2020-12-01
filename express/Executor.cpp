@@ -630,7 +630,7 @@ void Executor::_create(const std::vector<EXPRP>& outputs, std::set<std::shared_p
     std::shared_ptr<Backend> cacheBn;
     std::shared_ptr<Backend> cacheBackupBn;
     if (forceCPU) {
-        cacheBn.reset(mBackupRuntime.first->onCreate());
+        cacheBn.reset(mBackupRuntime.first->onCreate()); // CPUBackend
         cacheBackupBn = cacheBn;
     } else {
         cacheBn.reset(mRuntime.first->onCreate());
@@ -696,7 +696,7 @@ void Executor::_visit(EXPRP expr, std::set<std::shared_ptr<Executor::ComputeCach
     unit.outputs.resize(expr->inside()->mOutputTensors.size());
     unit.outputContents.resize(unit.outputs.size());
     for (int i=0; i<unit.outputs.size(); ++i) {
-        unit.outputContents[i].reset(new Tensor);
+        unit.outputContents[i].reset(new Tensor); // 这里还没有分配内存
         unit.outputs[i] = unit.outputContents[i].get();
     }
     for (int i=0; i<inputs.size(); ++i) {
@@ -730,6 +730,7 @@ void Executor::_makeCache(const std::vector<EXPRP>& expr, bool forceCPU) {
     std::set<std::shared_ptr<Executor::ComputeCache>> inputCaches;
     std::set<std::shared_ptr<Expr::Inside>> inputNode;
     for (auto e : expr) {
+        // 这里的create感觉像是创建Tensor的参数信息，但是不会分配内存
         _visit(e, inputCaches, inputNode);
     }
     _create(expr, std::move(inputCaches), std::move(inputNode), forceCPU);

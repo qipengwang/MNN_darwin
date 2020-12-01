@@ -19,6 +19,7 @@ using namespace std;
 
 namespace MNN {
 Tensor::Tensor(int dimSize, DimensionType type) {
+//    MNN_PRINT("call %s without memory alloc\n", __FUNCTION__);
     MNN_ASSERT(dimSize <= MNN_MAX_TENSOR_DIM);
     mDescribe          = new InsideDescribe;
     mBuffer.dimensions = dimSize;
@@ -43,7 +44,8 @@ Tensor::Tensor(int dimSize, DimensionType type) {
 }
 
 Tensor::Tensor(const Tensor* tensor, DimensionType type, bool allocMemory) {
-    MNN_ASSERT(tensor != nullptr);
+//    MNN_PRINT("call %s with allocMemory = %d\n", __FUNCTION__, allocMemory);
+//    MNN_ASSERT(tensor != nullptr);
 
     auto buffer        = tensor->buffer();
     mDescribe          = new InsideDescribe;
@@ -136,6 +138,7 @@ Tensor* Tensor::createDevice(const std::vector<int>& dims, halide_type_t type, D
 }
 
 Tensor* Tensor::create(const std::vector<int>& dims, halide_type_t type, void* userData, DimensionType dimType) {
+    MNN_PRINT("call %s and pre-alloc memory\n", __FUNCTION__ );
     Tensor shapeTensor((int)dims.size(), dimType);
     for (int i = 0; i < dims.size(); ++i) {
         shapeTensor.setLength(i, dims[i]);
@@ -143,6 +146,7 @@ Tensor* Tensor::create(const std::vector<int>& dims, halide_type_t type, void* u
     shapeTensor.buffer().type = type;
 
     bool ownData = userData == nullptr;
+    printf("ownData = %d\n", ownData);
     auto result  = new Tensor(&shapeTensor, dimType, ownData);
     if (nullptr != userData) {
         result->buffer().host = (uint8_t*)userData;

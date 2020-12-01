@@ -67,6 +67,7 @@ public:
 
 private:
     // remove all assignment operator
+    // To disable the usage of a member function.
     Tensor(const Tensor& tensor)  = delete;
     Tensor(const Tensor&& tensor) = delete;
     Tensor& operator=(const Tensor&) = delete;

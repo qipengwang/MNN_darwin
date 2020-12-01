@@ -7,6 +7,7 @@
 //
 
 #define FLATBUFFERS_PREFER_PRINTF
+
 #include <MNN/expr/Expr.hpp>
 #include <MNN/expr/Executor.hpp>
 #include <MNN/expr/ExprCreator.hpp>
@@ -126,8 +127,9 @@ void Expr::_addLinkForInputs(EXPRP expr) {
         }
     }
 }
-EXPRP Expr::create(Variable::Info&& info, const void* ptr, VARP::InputType type, bool copy) {
+EXPRP Expr::create(Variable::Info&& info, const void* ptr, VARP::InputType type, bool copy, std::string name) {
     EXPRP expr(new Expr(1));
+    expr->mName = name;
     expr->mOp = nullptr;
     auto originPtr = ptr;
     expr->mInside->mOutputInfos[0] = std::move(info);
@@ -168,8 +170,9 @@ EXPRP Expr::create(Variable::Info&& info, const void* ptr, VARP::InputType type,
     }
     return expr;
 }
-EXPRP Expr::create(std::pair<std::shared_ptr<char>, int> extra, std::vector<VARP>&& inputs, int outputSize) {
+EXPRP Expr::create(std::pair<std::shared_ptr<char>, int> extra, std::vector<VARP>&& inputs, int outputSize, std::string name) {
     EXPRP expr(new Expr(outputSize));
+    expr->setName(name);
     expr->mExtraBuffer = extra.first;
     expr->mOpBufferSize = extra.second;
     expr->mOp = flatbuffers::GetMutableRoot<Op>(extra.first.get());
@@ -180,7 +183,7 @@ EXPRP Expr::create(std::pair<std::shared_ptr<char>, int> extra, std::vector<VARP
     return expr;
 }
 
-EXPRP Expr::create(const OpT* op, std::vector<VARP> inputs, int outputSize) {
+EXPRP Expr::create(const OpT* op, std::vector<VARP> inputs, int outputSize, std::string name) {
     if (OpType_Input == op->type) {
         Variable::Info info;
         info.dim = op->main.AsInput()->dims;
@@ -189,7 +192,7 @@ EXPRP Expr::create(const OpT* op, std::vector<VARP> inputs, int outputSize) {
         }
         info.order = Utils::revertFormat(op->main.AsInput()->dformat);
         info.type = Utils::revertDataType(op->main.AsInput()->dtype);
-        return create(std::move(info), nullptr, VARP::INPUT);
+        return create(std::move(info), nullptr, VARP::INPUT, true, name);
     }
     if (OpType_Const == op->type || OpType_TrainableParam == op->type) {
         Variable::Info info;
@@ -214,7 +217,7 @@ EXPRP Expr::create(const OpT* op, std::vector<VARP> inputs, int outputSize) {
                 break;
         }
         //MNN_ASSERT(nullptr != ptr);
-        auto expr = create(std::move(info), ptr, VARP::CONSTANT);
+        auto expr = create(std::move(info), ptr, VARP::CONSTANT, true, name);
         if (OpType_TrainableParam == op->type && nullptr != ptr) {
             expr->mType = VARP::TRAINABLE;
         }
@@ -226,7 +229,11 @@ EXPRP Expr::create(const OpT* op, std::vector<VARP> inputs, int outputSize) {
     std::shared_ptr<char> extraBuffer(new char[builder.GetSize()], std::default_delete<char[]>());
     ::memcpy(extraBuffer.get(), builder.GetBufferPointer(), builder.GetSize());
     auto resExpr = Expr::create(std::make_pair(extraBuffer, builder.GetSize()), std::move(inputs), outputSize);
-    resExpr->setName(op->name);
+    if(op->name.empty()) {
+        resExpr->setName(name);
+    }else {
+        resExpr->setName(op->name);
+    }
     return resExpr;
 }
 void Expr::setName(const std::string& name) {
@@ -542,8 +549,26 @@ void Expr::visit(EXPRP expr, const std::function<bool(EXPRP)>& before, const std
     after(expr);
 }
 
-void* Variable::readInternal(bool forShape) {
+void* Variable::readInternal(bool forShape, bool swap) {
+    if(swap) {
+        auto fn = ("swap/" + name()).c_str();
+        FILE* f = fopen(fn, "rb");
+        if (f != nullptr) {
+            // 说明f是存在的
+            auto varp = load(fn)[0];
+            if(mFrom->mInside->mOutputTensors[mFromIndex]->buffer().host != nullptr) {
+
+            }
+            auto info = mFrom->mInside->mOutputInfos[0];
+            ::memcpy(mFrom->inside()->mOutputTensors[0]->buffer().host,
+                     varp->mFrom->mInside->mOutputTensors[mFromIndex]->buffer().host,
+                     info.size * info.type.bytes());
+            varp.reset();
+            return mFrom->mInside->mOutputTensors[mFromIndex]->buffer().host;
+        }
+    }
     if (nullptr == mFrom->get()) {
+        // Op* mOp, untrainable varp fall into this block
         if (VARP::INPUT == mFrom->mType) {
             if (mFrom->mInside->mContentDirty) {
                 return nullptr;
@@ -552,11 +577,12 @@ void* Variable::readInternal(bool forShape) {
         //MNN_ASSERT(nullptr != mFrom->inside()->mOutputTensors[0]->buffer().host);
         return mFrom->inside()->mOutputTensors[0]->buffer().host;
     }
-    auto res = mFrom->requireInfo();
+    auto res = mFrom->requireInfo(); //expr根据自己的input不断调用requireInfo getInfo，递归调用
     if (false == res) {
         return nullptr;
     }
     auto cache = mFrom->inside()->mCache;
+    //cache 是每个expr都有的
     if (nullptr == cache) {
         ExecutorScope::Current()->makeCache({mFrom}, forShape);
         cache = mFrom->inside()->mCache;
@@ -600,9 +626,11 @@ void Variable::informDirty() {
     }
 }
 void Variable::prepareCompute(const std::vector<VARP>& vars, bool forceCpu) {
+    //forceCPU = false
     std::vector<EXPRP> exprs;
     for (auto v : vars) {
         if (!v->expr().first->visited()) {
+            assert(v->expr().first->outputSize() == 1);
             v->expr().first->inside()->mCache = nullptr;
             v->expr().first->requireInfo();
             v->expr().first->setVisited(true);
@@ -770,8 +798,15 @@ std::vector<VARP> Variable::mapToSequence(const std::map<std::string, VARP>& sou
     }
     return outputs;
 }
-void Variable::save(const std::vector<VARP>& vars, NetT* dest) {
-    auto executeOrder = getExecuteOrder(vars);
+void Variable::save(const std::vector<VARP>& vars, NetT* dest, bool swap) {
+    std::vector<EXPRP> executeOrder;
+    if(swap) {
+        for(const auto& v: vars){
+            executeOrder.emplace_back(v->mFrom);
+        }
+    } else {
+        executeOrder = getExecuteOrder(vars);
+    }
 
     // Get Expr - TensorOffset Map
     std::map<EXPRP, int> varIndexInfo;
@@ -791,9 +826,9 @@ void Variable::save(const std::vector<VARP>& vars, NetT* dest) {
         auto expr = executeOrder[index];
         auto mOp = expr->get();
         std::unique_ptr<OpT> op;
-        if (nullptr != mOp) {
+        if (nullptr != mOp) { // untrainable
             op.reset(mOp->UnPack());
-        } else {
+        } else { // trainable
             MNN_ASSERT(1 == expr->outputSize());
             auto& info = expr->mInside->mOutputInfos[0];
             auto ptr = expr->mInside->mOutputTensors[0]->host<void>();
@@ -871,9 +906,9 @@ void Variable::save(const std::vector<VARP>& vars, NetT* dest) {
         }
     }
 }
-void Variable::save(const std::vector<VARP>& vars, const char* fileName) {
+void Variable::save(const std::vector<VARP>& vars, const char* fileName, bool swap) {
     std::unique_ptr<NetT> net(new NetT);
-    save(vars, net.get());
+    save(vars, net.get(), swap);
     // FUNC_PRINT(net->oplists.size());
     flatbuffers::FlatBufferBuilder builder(1024);
     auto offset = Net::Pack(builder, net.get());

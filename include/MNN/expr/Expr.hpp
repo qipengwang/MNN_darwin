@@ -60,6 +60,10 @@ public:
     VARP mean(INTS dims) const;
     VARP sum(INTS dims) const;
 
+    void reset(){
+        mContent.reset();
+    }
+
     bool operator==(const VARP& var) const {
         return var.mContent == mContent;
     }
@@ -119,8 +123,8 @@ public:
     const Info* getInfo();
     bool resize(INTS dims);
     template <typename T>
-    const T* readMap() {
-        return (const T*)readInternal();
+    const T* readMap(bool swap=false) {
+        return (const T*)readInternal(false, swap);
     }
 
     template <typename T>
@@ -143,8 +147,8 @@ public:
     static std::pair<std::map<std::string, VARP>, std::map<std::string, VARP>> getInputAndOutput(const std::map<std::string, VARP>& allVariable);
     static std::vector<VARP> mapToSequence(const std::map<std::string, VARP>& source);
     static std::vector<EXPRP> getExecuteOrder(const std::vector<VARP>& output);
-    static void save(const std::vector<VARP>& vars, const char* fileName);
-    static void save(const std::vector<VARP>& vars, NetT* dest);
+    static void save(const std::vector<VARP>& vars, const char* fileName, bool swap=false);
+    static void save(const std::vector<VARP>& vars, NetT* dest, bool swap=false);
     
     // Pack a few Variable to compute in one pipeline
     static void prepareCompute(const std::vector<VARP>& vars, bool forceCPU = false);
@@ -161,7 +165,7 @@ private:
         mFromIndex = index;
     }
 
-    void* readInternal(bool forShape = false);
+    void* readInternal(bool forShape = false, bool swap=false);
     void* writeInternal(bool inform=true);
     void informDirty();
 
@@ -173,11 +177,11 @@ private:
 class MNN_PUBLIC Expr {
 public:
     struct Inside;
-    static EXPRP create(Variable::Info&& info, const void* ptr, VARP::InputType type, bool copy = true);
-    static EXPRP create(const OpT* op, std::vector<VARP> inputs, int outputSize = 1);
-    static EXPRP create(std::pair<std::shared_ptr<char>, int> extra, std::vector<VARP>&& inputs, int outputSize = 1);
-    static EXPRP create(std::unique_ptr<OpT>&& op, std::vector<VARP> inputs, int outputSize = 1) {
-        return create(op.get(), inputs, outputSize);
+    static EXPRP create(Variable::Info&& info, const void* ptr, VARP::InputType type, bool copy = true, std::string name="");
+    static EXPRP create(const OpT* op, std::vector<VARP> inputs, int outputSize = 1, std::string name="");
+    static EXPRP create(std::pair<std::shared_ptr<char>, int> extra, std::vector<VARP>&& inputs, int outputSize = 1, std::string name="");
+    static EXPRP create(std::unique_ptr<OpT>&& op, std::vector<VARP> inputs, int outputSize = 1, std::string name="") {
+        return create(op.get(), inputs, outputSize, std::move(name));
     }
     void setName(const std::string& name);
 
@@ -230,9 +234,16 @@ public:
         mEntries = entries;
     }
 
+    void setOutputName(int index, std::string name) {
+        mOutputNames[index] = std::move(name);
+    }
+
     const std::vector<VARP>& getEntry() const {
         return mEntries;
     }
+
+    std::shared_ptr<Inside> mInside = nullptr;
+    std::vector<WeakEXPRP> mTo;
 
 private:
     static void _addLinkForInputs(EXPRP expr);
@@ -250,9 +261,9 @@ private:
     std::shared_ptr<char> mExtraBuffer;
     int mOpBufferSize = 0;
     std::string mName;
-    std::shared_ptr<Inside> mInside = nullptr;
+//    std::shared_ptr<Inside> mInside = nullptr;
     bool mVisited                   = false;
-    std::vector<WeakEXPRP> mTo;
+//    std::vector<WeakEXPRP> mTo;
 
     // Only the enter input has entries, and it helps to get info for enter
     // input expression.

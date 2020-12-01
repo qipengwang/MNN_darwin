@@ -12,5 +12,6 @@
 #include <MNN/expr/Expr.hpp>
 #include <MNN/expr/MathOp.hpp>
 #include <MNN/expr/NeuralNetWorkOp.hpp>
+#include "Utils.hpp"
 
 #endif

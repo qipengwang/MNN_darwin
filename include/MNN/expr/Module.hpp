@@ -44,6 +44,10 @@ public:
     int addParameter(Express::VARP parameter);
 
     void setParameter(Express::VARP parameter, int index);
+
+    int nLayers(){
+        return mChildren.size();
+    }
     static Module* createEmpty(const std::vector<Express::VARP>& parameters);
     static Module* load(const std::vector<std::string>& inputs, const std::vector<std::string>& outputs, const uint8_t* buffer, size_t length, bool dynamic = false);
     static Module* load(const std::vector<std::string>& inputs, const std::vector<std::string>& outputs, const char* fileName, bool dynamic = false);

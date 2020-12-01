@@ -5,7 +5,7 @@
 //  Created by MNN on 2020/01/08.
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
-
+#define DEBUG
 #include "MobilenetV2Utils.hpp"
 #include <MNN/expr/Executor.hpp>
 #include <MNN/expr/Optimizer.hpp>
@@ -18,6 +18,7 @@
 #include "SGD.hpp"
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
+#include <MNN_generated.h>
 #include "ADAM.hpp"
 #include "LearningRateScheduler.hpp"
 #include "Loss.hpp"
@@ -29,6 +30,12 @@
 using namespace MNN;
 using namespace MNN::Express;
 using namespace MNN::Train;
+
+std::string numberToString(int index) {
+    char s[10];
+    snprintf(s, 10, "%d", index);
+    return std::string(s);
+}
 
 void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses, const int addToLabel,
                                 std::string trainImagesFolder, std::string trainImagesTxt,
@@ -54,9 +61,9 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
     auto trainDataset = ImageDataset::create(trainImagesFolder, trainImagesTxt, datasetConfig.get(), readAllImagesToMemory);
     auto testDataset = ImageDataset::create(testImagesFolder, testImagesTxt, datasetConfig.get(), readAllImagesToMemory);
 
-    const int trainBatchSize = 32;
-    const int trainNumWorkers = 4;
-    const int testBatchSize = 10;
+    const int trainBatchSize = 4;
+    const int trainNumWorkers = 1;
+    const int testBatchSize = 1;
     const int testNumWorkers = 0;
 
     auto trainDataLoader = trainDataset.createLoader(trainBatchSize, true, true, trainNumWorkers);
@@ -90,9 +97,13 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
                 auto newTarget = _OneHot(_Cast<int32_t>(_Squeeze(example.second[0] + _Scalar<int32_t>(addToLabel), {})),
                                   _Scalar<int>(numClasses), _Scalar<float>(1.0f),
                                          _Scalar<float>(0.0f));
-
+                printf("call model.forward to build fp graph\n");
                 auto predict = model->forward(_Convert(example.first[0], NC4HW4));
                 auto loss    = _CrossEntropy(predict, newTarget);
+//                loss->setName("loss");
+//                Variable::save({loss}, "swap/loss.mobilenetv2.mnn");
+//                predict->setName("prob");
+//                Variable::save({predict}, "swap/prob.mobilenetv2.mnn");
                 // float rate   = LrScheduler::inv(0.0001, solver->currentStep(), 0.0001, 0.75);
                 float rate = 1e-5;
                 solver->setLearningRate(rate);
@@ -101,7 +112,31 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
                     std::cout << " loss: " << loss->readMap<float>()[0];
                     std::cout << " lr: " << rate << std::endl;
                 }
+//                auto executeOrder = Variable::getExecuteOrder({loss});
+//                int index=0;
+//                for (auto iter = executeOrder.rbegin(); iter != executeOrder.rend(); iter++) {
+//                    auto expr = *iter; // expr object
+//                    auto& name = expr->name();
+//                    if(name.empty()) {
+//                        MNN_PRINT("empty, set default: %s\t", (EnumNameOpType(OpType_Const) + numberToString(++index)).c_str());
+////                         continue;
+//                        int outSize=expr->outputSize();
+//                        MNN_PRINT("outputSize = %d:\t", outSize);
+////                        continue;
+//                        for(int p=0; p < outSize; p++){
+//                            if (expr->outputName(p).empty())
+//                                MNN_PRINT("#\t");
+//                            else
+//                                MNN_PRINT("%s\t", expr->outputName(p).c_str());
+//                        }MNN_PRINT("\n");
+//                    } else {
+//                        MNN_PRINT("name = %s\n", name.c_str());
+//                    }
+//                }
+//                return;
                 solver->step(loss);
+                MNN_PRINT("finish\n");
+                return;
             }
         }
 

@@ -129,6 +129,8 @@ std::map<Express::VARP, Express::VARP> OpGrad::gradCommon(Express::VARP loss, co
     std::map<Express::VARP, Express::VARP> grads;
     std::map<Expr*, VARP> parametersExpr;
     for (auto p : parameters) {
+        // MNN_PRINT("p->expr().first.get()->outputSize() = %d\n", p->expr().first.get()->outputSize());
+        MNN_ASSERT(p->expr().first.get()->outputSize() == 1);
         parametersExpr.insert(std::make_pair(p->expr().first.get(), p));
     }
     for (auto iter : backwardMap) {

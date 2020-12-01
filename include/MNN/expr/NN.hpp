@@ -46,23 +46,26 @@ public:
     };
     static Module* Conv(const ConvOption& option, bool bias = true,
                                         std::shared_ptr<Initializer> weightInit = nullptr,
-                                        std::shared_ptr<Initializer> biasInit   = nullptr);
+                                        std::shared_ptr<Initializer> biasInit   = nullptr,
+                                        std::string name = "");
     static Module* ConvTranspose(const ConvOption& option, bool bias = true,
                                                  std::shared_ptr<Initializer> weightInit = nullptr,
-                                                 std::shared_ptr<Initializer> biasInit   = nullptr);
+                                                 std::shared_ptr<Initializer> biasInit   = nullptr,
+                                 std::string name = "");
     static Module* Linear(int l, int t, bool hasBias = true,
                                           std::shared_ptr<Initializer> weightInit = nullptr,
-                                          std::shared_ptr<Initializer> biasInit   = nullptr);
-    static Module* Dropout(const float dropRatio);
+                                          std::shared_ptr<Initializer> biasInit   = nullptr,
+                          std::string name = "");
+    static Module* Dropout(const float dropRatio, std::string name = "");
     static Module* BatchNorm(const int channels, const int dims = 4, const float m = 0.999,
-                                             const float e = 1e-5);
+                                             const float e = 1e-5, std::string name = "");
 
     static Module* ConvInt8(const ConvOption& option, int bits = 8, bool bias = true,
                                             std::shared_ptr<Initializer> weightInit = nullptr,
                                             std::shared_ptr<Initializer> biasInit   = nullptr,
                                             FeatureScaleStatMethod featureMethod = PerChannel,
-                                            ScaleUpdateMethod method = MovingAverage
-                                            );
+                                            ScaleUpdateMethod method = MovingAverage,
+                                            std::string name = "");
     struct ConvParameters {
         ConvOption option;
         Express::VARP weight;
@@ -72,12 +75,14 @@ public:
     };
     static Module* ConvInt8(const ConvParameters& parameters, int bits,
                                             FeatureScaleStatMethod featureMethod = PerChannel,
-                                            ScaleUpdateMethod method = MovingAverage);
-    static Module* ConvOctave(const ConvParameters& parameters, float inFactor, float outFactor);
-    static Module* Conv(const ConvParameters& parameters);
+                                            ScaleUpdateMethod method = MovingAverage,
+                                            std::string name = "");
+    static Module* ConvOctave(const ConvParameters& parameters, float inFactor, float outFactor, std::string name = "");
+    static Module* Conv(const ConvParameters& parameters, std::string name = "");
     static Module* ConvBNReluFused(std::vector<std::shared_ptr<Module> > modules,
                                                    NN::FeatureScaleStatMethod featureScaleStatMethod = PerTensor,
-                                                   NN::ScaleUpdateMethod scaleUpdateMethod = MovingAverage, const int bits = 8);
+                                                   NN::ScaleUpdateMethod scaleUpdateMethod = MovingAverage, const int bits = 8,
+                                                   std::string name = "");
 
     class Utils {
     public:

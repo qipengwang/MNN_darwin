@@ -16,6 +16,7 @@ static inline void **alignPointer(void **ptr, size_t alignment) {
 }
 
 extern "C" void *MNNMemoryAllocAlign(size_t size, size_t alignment) {
+//    printf("call %s in %s\n", __FUNCTION__ ,__FILE_NAME__);
     MNN_ASSERT(size > 0);
 
 #ifdef MNN_DEBUG_MEMORY
