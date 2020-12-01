@@ -103,7 +103,7 @@ void Module::setParameter(Express::VARP parameter, int index) {
     mParameters[index] = parameter;
 }
 
-void Module::_collectParameters(std::vector<Express::VARP>& result) const {
+void Module:: _collectParameters(std::vector<Express::VARP>& result) const {
     for (auto p : mParameters) {
         result.push_back(p);
     }

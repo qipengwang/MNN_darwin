@@ -154,7 +154,7 @@ MobilenetV2::MobilenetV2(int numClasses, float widthMult, int divisor) {
     dropout.reset(NN::Dropout(0.1));
     fc.reset(NN::Linear(lastChannels, numClasses, true, std::shared_ptr<Initializer>(Initializer::MSRA())));
 
-    registerModel({firstConv, lastConv, dropout, fc});
+    registerModel({firstConv, lastConv, dropout,  });
     registerModel(bottleNeckBlocks);
 }
 

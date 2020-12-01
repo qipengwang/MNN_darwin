@@ -225,6 +225,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
            grad.size(), executor_order.size(), parameters.size(), trainable().size(), prepareCompute.size());*/
     //mbnv2: grad.size = 158    executor_order.size = 963       params.size = 262       trainable.size = 158    prepareCompute.size = 262
     Variable::prepareCompute(prepareCompute); // exec.makeCache()
+//    <untrainable, trainable-grad> //104,2     54,1
 //    printf("finish prepareCompute()\n");
     std::vector<VARP> replaceOp(prepareCompute.size());
     for (int i=0; i<prepareCompute.size(); ++i) {
