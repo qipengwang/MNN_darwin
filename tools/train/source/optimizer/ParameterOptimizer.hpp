@@ -31,10 +31,13 @@ public:
 
     static ParameterOptimizer* createSGD(std::shared_ptr<Express::Module> module, float lr, float momentum, float weightDecay, RegularizationMethod method);
     static ParameterOptimizer* createADAM(std::shared_ptr<Express::Module> module, float lr, float momentum, float momentum2, float weightDecay, float eps, RegularizationMethod method);
-protected:
+    const std::set<Express::VARP>& swapable() const {
+        return mSwapable;
+    }
     const std::set<Express::VARP>& trainable() const {
         return mTrainable;
     }
+protected:
     std::shared_ptr<Express::Module> module() const {
         return mModule;
     }
@@ -42,6 +45,7 @@ private:
     int mStep = 0;
     std::shared_ptr<Express::Module> mModule;
     std::set<Express::VARP> mTrainable;
+    std::set<Express::VARP> mSwapable;
 };
 
 } // namespace Train

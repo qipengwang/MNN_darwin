@@ -100,6 +100,7 @@ bool VARP::fix(VARP::InputType type) const {
 Expr::Expr(int outputSize) {
     mInside.reset(new Inside(outputSize));
     mOutputNames.resize(outputSize);
+    mOutputVars.clear();
 }
 
 Expr::~Expr() {
@@ -178,6 +179,9 @@ EXPRP Expr::create(std::pair<std::shared_ptr<char>, int> extra, std::vector<VARP
     expr->mOp = flatbuffers::GetMutableRoot<Op>(extra.first.get());
     expr->mOpBufferSize = extra.second;
     expr->mInputs   = std::move(inputs);
+    for(const auto& input: expr->mInputs) {
+        input->addInput2expr(expr);
+    }
     expr->mInside->mReq = ExecutorScope::Current()->getRequirement(expr.get());
     _addLinkForInputs(expr);
     return expr;
@@ -299,6 +303,8 @@ const std::vector<WeakEXPRP>& Variable::toExprs() const {
 
 VARP Variable::create(EXPRP expr, int index) {
     VARP res(new Variable(expr, index));
+//    printf("fuck in the variable.create\n");
+    expr->addOutput(res);
 #ifdef MNN_EXPR_SHAPE_EAGER
     auto info = expr->requireInfo();
     if (!info) {
@@ -317,6 +323,7 @@ void Expr::replace(EXPRP old, EXPRP from) {
         for (int j=0; j<input->mFrom->mTo.size(); ++j) {
             auto ref = input->mFrom->mTo[j].lock();
             if (ref.get() == old.get()) {
+                // 指向自己（old）的设置为空
                 input->mFrom->mTo[j].reset();
             }
         }
@@ -353,6 +360,7 @@ void Expr::replace(EXPRP old, EXPRP from) {
     old->mValid = from->mValid;
     old->mInside = from->mInside;
     old->mInputs = from->mInputs;
+    old->mOutputVars = from->mOutputVars;
     std::vector<Expr*> visited;
     old->visitOutputs([&](EXPRP expr, int index) {
         if (expr->visited()) {
@@ -382,13 +390,16 @@ const std::string& Variable::name() const {
 }
 bool Variable::input(VARP src) {
     if (nullptr != mFrom->get() || VARP::CONSTANT == mFrom->mType) {
+        // untrainable || constant
         MNN_ERROR("Can't input to no-input op\n");
         return false;
     }
     if (nullptr == src) {
+        // 如果src不能作为输入，那么我的所有输出的expr应该都是不合法的，就是说都不能输入tensor
         /*Close the Input*/
         mFrom->visitOutputs([](EXPRP expr, int index) {
-            auto recurse = expr->mValid; expr->mValid = false;
+            auto recurse = expr->mValid;
+            expr->mValid = false;
             return recurse;
         });
         mFrom->mValid = false;
@@ -489,6 +500,7 @@ void Variable::replace(VARP dst, VARP src) {
     }
     Expr::replace(dst->mFrom, src->mFrom);
     dst->mFromIndex = src->mFromIndex;
+    dst->mInput2Exprs = src->mInput2Exprs;
 }
 
 const Variable::Info* Variable::getInfo() {
@@ -663,7 +675,7 @@ void Expr::visitOutputs(const std::function<bool(EXPRP, int)>& visit) {
         auto expr = iter->lock();
         if (nullptr == expr) {
             iter = mTo.erase(iter);
-            continue;
+            continue; // 后面的 iter++ 一定不能放在for里面
         }
         bool recurse = false;
         auto inputs = expr->inputs();

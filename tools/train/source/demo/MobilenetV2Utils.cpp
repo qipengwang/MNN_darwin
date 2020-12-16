@@ -90,6 +90,10 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
             }
             for (int i = 0; i < trainIterations; i++) {
                 AUTOTIME;
+                printf("solver->swapable().size() = %lu,\tsolver->trainable().size() = %lu\n", solver->swapable().size(),solver->trainable().size());
+                for(auto p: solver->swapable()) {
+                    p->clearInput2Expr();
+                }
                 auto trainData  = trainDataLoader->next();
                 auto example    = trainData[0];
 
@@ -97,7 +101,7 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
                 auto newTarget = _OneHot(_Cast<int32_t>(_Squeeze(example.second[0] + _Scalar<int32_t>(addToLabel), {})),
                                   _Scalar<int>(numClasses), _Scalar<float>(1.0f),
                                          _Scalar<float>(0.0f));
-                printf("call model.forward to build fp graph\n");
+                printf("call model.forward to build forward propagation graph\n");
                 auto predict = model->forward(_Convert(example.first[0], NC4HW4));
                 auto loss    = _CrossEntropy(predict, newTarget);
 //                loss->setName("loss");
@@ -107,7 +111,7 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
                 // float rate   = LrScheduler::inv(0.0001, solver->currentStep(), 0.0001, 0.75);
                 float rate = 1e-5;
                 solver->setLearningRate(rate);
-                if (solver->currentStep() % 10 == 0) {
+                if (solver->currentStep() % 5 == 0) {
                     std::cout << "train iteration: " << solver->currentStep();
                     std::cout << " loss: " << loss->readMap<float>()[0];
                     std::cout << " lr: " << rate << std::endl;
@@ -135,7 +139,7 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
 //                }
 //                return;
                 solver->step(loss);
-                MNN_PRINT("finish\n");
+                MNN_PRINT("finish one iteration\n");
                 return;
             }
         }

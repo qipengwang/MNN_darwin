@@ -28,6 +28,7 @@ class Expr;
 class Executor;
 typedef std::shared_ptr<Expr> EXPRP;
 typedef std::weak_ptr<Expr> WeakEXPRP;
+typedef std::weak_ptr<Variable> WeakVARP;
 typedef std::vector<int> INTS;
 enum Dimensionformat { NHWC, NC4HW4, NCHW };
 class MNN_PUBLIC VARP {
@@ -62,6 +63,9 @@ public:
 
     void reset(){
         mContent.reset();
+    }
+    std::shared_ptr<Variable> getContent() const {
+        return mContent;
     }
 
     bool operator==(const VARP& var) const {
@@ -159,6 +163,19 @@ public:
         mFrom = expr;
         mFromIndex = index;
     }
+
+    void addInput2expr(const EXPRP& exprp) {
+        mInput2Exprs.emplace_back(WeakEXPRP(exprp));
+    }
+
+    const std::vector<WeakEXPRP>& getInput2Expr() const {
+        return mInput2Exprs;
+    }
+
+    void clearInput2Expr(){
+        mInput2Exprs.clear();
+    }
+
 private:
     Variable(EXPRP expr, int index) {
         mFrom      = expr;
@@ -172,6 +189,7 @@ private:
     friend class Expr;
     EXPRP mFrom;
     int mFromIndex;
+    std::vector<WeakEXPRP> mInput2Exprs;
 };
 
 class MNN_PUBLIC Expr {
@@ -223,7 +241,7 @@ public:
         return std::make_pair(mExtraBuffer, mOpBufferSize);
     }
     bool setInfoDirty();
-    std::shared_ptr<Inside> inside() const {
+    const std::shared_ptr<Inside>& inside() const {
         return mInside;
     }
     bool valid() const {
@@ -242,8 +260,21 @@ public:
         return mEntries;
     }
 
+    void addOutput(const VARP& varp) {
+//        printf("before mOutputVars.size = %lu\n", mOutputVars.size());
+        mOutputVars.emplace_back(WeakVARP(varp.getContent()));
+//        printf("after mOutputVars.size = %lu\n", mOutputVars.size());
+    }
+
+    const std::vector<WeakVARP>& outputVars() const {
+        return mOutputVars;
+    }
+
+    void clearOutputVars() {
+        mOutputVars.clear();
+    }
+
     std::shared_ptr<Inside> mInside = nullptr;
-    std::vector<WeakEXPRP> mTo;
 
 private:
     static void _addLinkForInputs(EXPRP expr);
@@ -268,6 +299,8 @@ private:
     // Only the enter input has entries, and it helps to get info for enter
     // input expression.
     std::vector<VARP> mEntries;
+    std::vector<WeakVARP> mOutputVars;
+    std::vector<WeakEXPRP> mTo;
 };
 } // namespace Express
 } // namespace MNN

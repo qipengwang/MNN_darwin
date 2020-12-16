@@ -87,7 +87,7 @@ bool Module::getIsTraining() {
 }
 
 void Module::registerModel(const std::vector<std::shared_ptr<Module>>& children) {
-    mChildren.insert(mChildren.begin(), children.begin(), children.end());
+    mChildren.insert(mChildren.end(), children.begin(), children.end());
 }
 int Module::addParameter(VARP parameter) {
     auto res = mParameters.size();

@@ -131,7 +131,8 @@ class MobilenetV2TrainQuant : public DemoUnit {
 public:
     virtual int run(int argc, const char* argv[]) override {
         if (argc < 6) {
-            std::cout << "usage: ./runTrainDemo.out MobilentV2TrainQuant /path/to/mobilenetV2Model path/to/train/images/ path/to/train/image/txt path/to/test/images/ path/to/test/image/txt [bits]"
+            std::cout << "usage: ./runTrainDemo.out MobilentV2TrainQuant /path/to/mobilenetV2Model "
+                         "path/to/train/images/ path/to/train/image/txt path/to/test/images/ path/to/test/image/txt [bits]"
                       << std::endl;
             return 0;
         }

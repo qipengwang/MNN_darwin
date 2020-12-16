@@ -128,6 +128,7 @@ MobilenetV2::MobilenetV2(int numClasses, float widthMult, int divisor) {
     lastChannels  = makeDivisible(lastChannels * std::max(1.0f, widthMult), divisor);
 
     firstConv = ConvBnRelu({3, inputChannels}, 3, 2);
+    registerModel({firstConv});
 
     for (int i = 0; i < invertedResidualSetting.size(); i++) {
         std::vector<int> setting = invertedResidualSetting[i];
@@ -154,8 +155,9 @@ MobilenetV2::MobilenetV2(int numClasses, float widthMult, int divisor) {
     dropout.reset(NN::Dropout(0.1));
     fc.reset(NN::Linear(lastChannels, numClasses, true, std::shared_ptr<Initializer>(Initializer::MSRA())));
 
-    registerModel({firstConv, lastConv, dropout,  });
+//    registerModel({firstConv, lastConv, dropout, fc});
     registerModel(bottleNeckBlocks);
+    registerModel({lastConv, dropout, fc});
 }
 
 std::vector<Express::VARP> MobilenetV2::onForward(const std::vector<Express::VARP> &inputs) {
@@ -182,7 +184,6 @@ std::vector<Express::VARP> MobilenetV2::onForward(const std::vector<Express::VAR
     x = _Softmax(x, 1);
     return {x};
 }
-
 } // namespace Model
 } // namespace Train
 } // namespace MNN

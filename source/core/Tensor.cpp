@@ -138,7 +138,7 @@ Tensor* Tensor::createDevice(const std::vector<int>& dims, halide_type_t type, D
 }
 
 Tensor* Tensor::create(const std::vector<int>& dims, halide_type_t type, void* userData, DimensionType dimType) {
-    MNN_PRINT("call %s and pre-alloc memory\n", __FUNCTION__ );
+//    MNN_PRINT("call %s and pre-alloc memory\n", __FUNCTION__ );
     Tensor shapeTensor((int)dims.size(), dimType);
     for (int i = 0; i < dims.size(); ++i) {
         shapeTensor.setLength(i, dims[i]);

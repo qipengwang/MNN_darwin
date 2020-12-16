@@ -23,6 +23,9 @@ ParameterOptimizer::ParameterOptimizer(std::shared_ptr<Module> module) {
         }
         if (p->expr().first->inputType() == Express::VARP::TRAINABLE) {
             mTrainable.insert(p);
+            if(p->getInput2Expr().empty()) {
+                mSwapable.insert(p);
+            }
         }
     }
     mModule = module;
@@ -56,9 +59,9 @@ bool ParameterOptimizer::step(Express::VARP loss) {
         iter.second.fix(Express::VARP::TRAINABLE);
         iter.first->input(iter.second);
     }
-//    for (auto iter : res) {
-//        iter.first->input(iter.second);
-//    }
+    for (auto iter : res) {
+        iter.first->input(iter.second);
+    }
     return !res.empty();
 }
 

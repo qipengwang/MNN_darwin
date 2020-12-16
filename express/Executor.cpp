@@ -682,6 +682,7 @@ void Executor::_visit(EXPRP expr, std::set<std::shared_ptr<Executor::ComputeCach
 
     auto op = expr->get();
     if (nullptr == op) {
+        //trainable
         return;
     }
     if (nullptr != expr->inside()->mUnit) {

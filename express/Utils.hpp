@@ -26,7 +26,7 @@ struct Expr::Inside {
     bool mInfoDirty = true;
     bool mContentDirty = true;
 };
-class Utils {
+class MNN_PUBLIC Utils {
 public:
     static void copyInfoToTensor(Tensor* dest, const Variable::Info* source);
     static void copyTensorToInfo(Variable::Info* dest, const Tensor* source);
