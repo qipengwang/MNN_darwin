@@ -16,6 +16,8 @@
 #include <set>
 #include <MNN/MNNForwardType.h>
 namespace MNN {
+//下面的这些东西可以当作ptr使用，而非obj
+//或者就是告诉下面定义的executor有这些类
 class Backend;
 class Execution;
 class Runtime;

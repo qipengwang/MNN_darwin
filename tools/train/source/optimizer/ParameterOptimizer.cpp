@@ -57,7 +57,7 @@ bool ParameterOptimizer::step(Express::VARP loss) {
     auto res = this->onGetNextParameter(loss);
     for (auto iter : res) {
         iter.second.fix(Express::VARP::TRAINABLE);
-        iter.first->input(iter.second);
+//        iter.first->input(iter.second);
     }
     for (auto iter : res) {
         iter.first->input(iter.second);

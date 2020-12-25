@@ -87,6 +87,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
     std::vector<VARP> trainable_params;
     for (auto p : parameters) {
         if (nullptr == p.get() || p->expr().first->get() != nullptr) {
+            // untrainable
             continue;
         }
         if (p->expr().first->inputType() == Express::VARP::TRAINABLE) {
@@ -122,6 +123,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
 //                iter->setName(&"featuremap:" [prepareCompute.size()]);
 //            }
             prepareCompute.emplace_back(swapable_feature[iter]);
+            assert(swapable_feature[iter]->expr().first->get() != nullptr);
         }
     }
     printf("without unswapable vars, prepareCompute.size = %lu\n", prepareCompute.size());
@@ -131,7 +133,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
     std::map<VARP, VARP> invertedGrad;
     for(auto iter: grad) {
         invertedGrad.insert(std::make_pair(iter.second, iter.first));
-        printf("gradient.input.size = %lu\n", iter.second->expr().first->inputs().size());
+//        printf("gradient.input.size = %lu\n", iter.second->expr().first->inputs().size());
     }
 
     for (auto iter = trainable_params.rbegin(); iter != trainable_params.rend(); iter++) {
@@ -271,7 +273,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
 //    <untrainable, trainable-grad> //104,2     54,1
     std::vector<VARP> replaceOp(prepareCompute.size());
     for (int i = 0; i < prepareCompute.size(); ++i) {
-        printf("current is %s:\t", tags[i].c_str());
+//        printf("current is %s:\t", tags[i].c_str());
         auto info = prepareCompute[i]->getInfo();
         const void *ptr;
         if (swapable().find(prepareCompute[i]) != swapable().end()) {
@@ -302,20 +304,20 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
 //        printf("save into file: <%s>\n", prepareCompute[i]->name().c_str());
 //        printf("var[%d] is %s, with size = %d, and the exec-ord.size belong to it is %d\n",
 //               i, tags[i].c_str(), prepareCompute[i]->getInfo()->size, s);
-        if (tags[i] == "untrainable" || tags[i] == "featuremap") {
-            printf("don't need release && continue\n");
+        /*if (tags[i] == "untrainable" || tags[i] == "featuremap") {
+//            printf("don't need release && continue\n");
         } else  {
             //tags[i]=="gradient"
-            printf("fall in to grad block:\t");
+//            printf("fall in to grad block:\t");
             bool flag=false;
 //            printf("gradient.inputSize = %lu\n", prepareCompute[i]->expr().first->inputs().size());
 //            Variable::save({prepareCompute[i]}, ("swap/" + prepareCompute[i]->name()).c_str(), true);
             auto var = invertedGrad[prepareCompute[i]];
-            printf("get trainable varp:\t");
+//            printf("get trainable varp:\t");
             auto miter = std::find(trainable_params.begin(), trainable_params.end(), var) + 1;
-            printf("get next trainable varp\t");
+//            printf("get next trainable varp\t");
             if (miter != trainable_params.end() && swapable().find(*miter) != swapable().end()){
-                printf("try releasing memory...\t");
+//                printf("try releasing memory...\t");
                 auto nextVarp = *miter;
                 assert(nextVarp.get() != nullptr);
                 auto nextVarpGrad = grad[*miter];
@@ -323,7 +325,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
                 auto gradExecOrd = Variable::getExecuteOrder({nextVarpGrad});
                 auto fmExecOrd = Variable::getExecuteOrder({swapable_feature[nextVarp]});
 //                printf("<mdzz>\t");
-                for(auto it=gradExecOrd.rbegin(); it!=gradExecOrd.rend(); it++) {
+                for(auto it = gradExecOrd.rbegin(); it != gradExecOrd.rend(); it++) {
 //                    printf("<shit>\t");
                     if(std::find(fmExecOrd.begin(), fmExecOrd.end(), *it) == fmExecOrd.end()) {
 //                        printf("<fuck>\t");
@@ -336,7 +338,7 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
                         }
                         if(ok) {
 //                            printf("releasing...\t");
-                            flag = flag || Utils::releaseMemoryForHostTensor((*it)->inside()->mOutputTensors[0]);
+//                            flag = flag || Utils::releaseMemoryForHostTensor((*it)->inside()->mOutputTensors[0]);
                         }
                     }
                 }
@@ -347,7 +349,8 @@ std::map<Express::VARP, Express::VARP> SGD::onGetNextParameter(Express::VARP los
                 printf("don't release any memory\t");
             }
             printf("$\n");
-        }
+        }*/
+//        printf("\n");
 
     }
     printf("finish readmap & start replace-ing\n");

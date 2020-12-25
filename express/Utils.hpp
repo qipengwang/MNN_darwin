@@ -23,8 +23,8 @@ struct Expr::Inside {
     std::shared_ptr<Executor::Unit> mUnit;
     std::shared_ptr<Executor::ComputeCache> mCache;
     int mCacheOffset = 0;
-    bool mInfoDirty = true;
-    bool mContentDirty = true;
+    bool mInfoDirty = true; // 对应的info是不全的或者需要修改的，即当前的info是不对的
+    bool mContentDirty = true; // 对应的content被修改过了
 };
 class MNN_PUBLIC Utils {
 public:

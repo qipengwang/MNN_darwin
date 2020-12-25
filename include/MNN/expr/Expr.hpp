@@ -115,7 +115,7 @@ public:
         Dimensionformat order = NHWC;
         INTS dim;
         halide_type_t type;
-        int size;
+        int size; // how many elmts are in this var
         void syncSize();
     };
     const std::string& name() const;

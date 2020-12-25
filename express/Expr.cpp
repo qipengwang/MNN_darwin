@@ -251,8 +251,11 @@ bool Expr::requireInfo() {
         return false;
     }
     if (nullptr == mOp) {
+        // not untrainable params
+        // trainable？？所以是[0]?
         return !HasUnknownDim(mInside->mOutputInfos[0].dim);
     }
+    // untrainable
     bool ready     = true;
     for (int i = 0; i < mInputs.size(); ++i) {
         if (nullptr == mInputs[i] || nullptr == mInputs[i]->mFrom) {
@@ -273,6 +276,8 @@ bool Expr::requireInfo() {
         if (mInside->mReq.shapeNeedContent[i]) {
             // For shape need content, the content must not be nullptr
             auto ptr = v->readInternal(true);
+            // 这个 if block 不会进来 ==！
+            // printf("in %s: shapeNeedContent[%d] = true\n", __FUNCTION__, i);
             if (nullptr == ptr) {
                 ready = false;
                 break;
@@ -315,24 +320,25 @@ VARP Variable::create(EXPRP expr, int index) {
 #endif
     return res;
 }
-void Expr::replace(EXPRP old, EXPRP from) {
-    if (old.get() == from.get()) {
+void Expr::replace(EXPRP dst, EXPRP src) {
+    if (dst.get() == src.get()) {
         return;
     }
-    for (auto input : old->inputs()) {
+    //因为dst即将被修改所以先把和dst相关的删掉
+    for (auto input : dst->inputs()) {
         for (int j=0; j<input->mFrom->mTo.size(); ++j) {
             auto ref = input->mFrom->mTo[j].lock();
-            if (ref.get() == old.get()) {
-                // 指向自己（old）的设置为空
+            if (ref.get() == dst.get()) {
+                // 指向自己（dst）的设置为空
                 input->mFrom->mTo[j].reset();
             }
         }
     }
-    for (auto input : from->inputs()) {
+    for (auto input : src->inputs()) {
         bool hasSet = false;
         for (int j=0; j<input->mFrom->mTo.size(); ++j) {
             auto ref = input->mFrom->mTo[j].lock();
-            if (ref.get() == old.get()) {
+            if (ref.get() == dst.get()) {
                 hasSet = true;
                 break;
             }
@@ -341,28 +347,28 @@ void Expr::replace(EXPRP old, EXPRP from) {
             for (int j=0; j<input->mFrom->mTo.size(); ++j) {
                 auto ref = input->mFrom->mTo[j].lock();
                 if (nullptr == ref) {
-                    input->mFrom->mTo[j] = WeakEXPRP(old);
+                    input->mFrom->mTo[j] = WeakEXPRP(dst);
                     hasSet = true;
                     break;
                 }
             }
         }
         if (!hasSet) {
-            input->mFrom->mTo.emplace_back(WeakEXPRP(old));
+            input->mFrom->mTo.emplace_back(WeakEXPRP(dst));
         }
     }
-    old->mOp = from->mOp;
-    old->mName = from->mName;
-    old->mOutputNames = from->mOutputNames;
-    old->mExtraBuffer = from->mExtraBuffer;
-    old->mOpBufferSize = from->mOpBufferSize;
-    old->mType = from->mType;
-    old->mValid = from->mValid;
-    old->mInside = from->mInside;
-    old->mInputs = from->mInputs;
-    old->mOutputVars = from->mOutputVars;
+    dst->mOp = src->mOp;
+    dst->mName = src->mName;
+    dst->mOutputNames = src->mOutputNames;
+    dst->mExtraBuffer = src->mExtraBuffer;
+    dst->mOpBufferSize = src->mOpBufferSize;
+    dst->mType = src->mType;
+    dst->mValid = src->mValid;
+    dst->mInside = src->mInside;
+    dst->mInputs = src->mInputs;
+    dst->mOutputVars = src->mOutputVars;
     std::vector<Expr*> visited;
-    old->visitOutputs([&](EXPRP expr, int index) {
+    dst->visitOutputs([&](EXPRP expr, int index) {
         if (expr->visited()) {
             return false;
         }
@@ -390,14 +396,15 @@ const std::string& Variable::name() const {
 }
 bool Variable::input(VARP src) {
     if (nullptr != mFrom->get() || VARP::CONSTANT == mFrom->mType) {
-        // untrainable || constant
+        // untrainable || constant reserve
         MNN_ERROR("Can't input to no-input op\n");
         return false;
     }
     if (nullptr == src) {
-        // 如果src不能作为输入，那么我的所有输出的expr应该都是不合法的，就是说都不能输入tensor
+        // 如果src不能作为输入，那么我的所有to的expr应该都是不合法的，就是说都不能输入tensor
         /*Close the Input*/
         mFrom->visitOutputs([](EXPRP expr, int index) {
+            //如果当前mTo的Expr是valid的那么他后面的都要遍历成invalid的
             auto recurse = expr->mValid;
             expr->mValid = false;
             return recurse;
@@ -442,9 +449,11 @@ bool Variable::input(VARP src) {
         }
         ::memcpy(dstPtr, srcPtr, info->size * info->type.bytes());
     }
+    //存在疑问？？？ //info-dirty一定是content-dirty，但是反之不一定？
     if (needChange) {
         mFrom->visitOutputs([](EXPRP expr, int index) { return expr->setInfoDirty(); });
     } else {
+        //当前的内容被修改了，后面的就不能用了
         informDirty();
     }
     mFrom->mInside->mContentDirty = false;
@@ -504,6 +513,8 @@ void Variable::replace(VARP dst, VARP src) {
 }
 
 const Variable::Info* Variable::getInfo() {
+    //如果mFrom是空的或者mFrom无法获取Info那么我自己的Info就是空的
+    //一个var一定来自于一个Expr（mFrom）
     if (nullptr == mFrom) {
         return nullptr;
     }
@@ -516,10 +527,11 @@ const Variable::Info* Variable::getInfo() {
 
 bool Variable::resize(INTS dims) {
     if (nullptr != mFrom->get() && VARP::INPUT != mFrom->mType) {
+        // untrainable && not input
         MNN_ERROR("Can't resize variable not from input\n");
         return false;
     }
-    auto& info = mFrom->mInside->mOutputInfos[0];
+    auto& info = mFrom->mInside->mOutputInfos[0]; // 这里为什么是 0 不是 mFromIndex
     if (dims.size() == info.dim.size()) {
         bool theSame = true;
         for (int i=0; i<dims.size(); ++i) {
@@ -547,6 +559,7 @@ bool Variable::resize(INTS dims) {
     mFrom->mValid = true;
     mFrom->inside()->mInfoDirty = false;
     mFrom->inside()->mContentDirty = true;
+    //当前的var进行了resize，那么以其作为input的节点都是需要更新info的
     mFrom->visitOutputs([](EXPRP expr, int index) { return expr->setInfoDirty(); });
     return true;
 }
@@ -563,11 +576,11 @@ void Expr::visit(EXPRP expr, const std::function<bool(EXPRP)>& before, const std
 
 void* Variable::readInternal(bool forShape, bool swap) {
     if(swap) {
-        auto fn = ("swap/" + name()).c_str();
-        FILE* f = fopen(fn, "rb");
+        auto fn = ("swap/" + name());
+        FILE* f = fopen(fn.c_str(), "rb");
         if (f != nullptr) {
             // 说明f是存在的
-            auto varp = load(fn)[0];
+            auto varp = load(fn.c_str())[0];
             if(mFrom->mInside->mOutputTensors[mFromIndex]->buffer().host != nullptr) {
 
             }
@@ -609,6 +622,7 @@ void* Variable::readInternal(bool forShape, bool swap) {
 }
 
 void Variable::informDirty() {
+    //当前var的informDirty指的是通知其他的var我的content是不可用的（dirty的）
     std::vector<Expr*> visited;
     mFrom->visitOutputs([&visited](EXPRP expr, int index) {
         if (expr->visited()) {
@@ -618,15 +632,22 @@ void Variable::informDirty() {
         expr->setVisited(true);
         if (expr->inside()->mReq.shapeNeedContent.empty()) {
             // Not init
+            //如果是没有init的就可以随意操作，就不是dirty的，就不用通知后面的mTo了
             return false;
         }
         if (expr->inside()->mReq.shapeNeedContent[index]) {
-            expr->setInfoDirty();
-            expr->visitOutputs([](EXPRP e, int index) { return e->setInfoDirty(); });
+            //如果说init了但是我的shape信息是空的，那我的info就是dirty的，但是shape信息是空的仍然是表示可以随意操作的，不用遍历后面的mTo
+            //因为连shape都没有content哪来的dirty呢？
+
+            //不用InformDirty（content）（return false）但是需要setInfoDirty（info）
+            expr->setInfoDirty(); // 我的info都是dirty的，因为mTo是需要读取我的info的
+            expr->visitOutputs([](EXPRP e, int index) { return e->setInfoDirty(); });  // 我后面的mTo的info都是dirty的，因为mTo是需要读取我的info的
             return false;
         }
         if (expr->inside()->mReq.contentNeedContent[index]) {
+            //如果我的content还没写入的话就是dirty的，那我后面的都不能读取我的content
             if (expr->inside()->mCache != nullptr) {
+                //cache->contentDirty = true;
                 Executor::setContentDirty(expr->inside()->mCache.get());
             }
             return true;
@@ -657,6 +678,7 @@ void Variable::prepareCompute(const std::vector<VARP>& vars, bool forceCpu) {
 
 void* Variable::writeInternal(bool inform) {
     if (nullptr != mFrom->get()) {
+        //untrainable
         return nullptr;
     }
     if (inform) {
@@ -681,6 +703,7 @@ void Expr::visitOutputs(const std::function<bool(EXPRP, int)>& visit) {
         auto inputs = expr->inputs();
         for (int i=0; i<inputs.size(); ++i) {
             if (inputs[i]->mFrom.get() == this) {
+                //如果当前expr的输出的var是 mTo[i] 输入，说明二者之间是有一条"路径"的
                 recurse = recurse || visit(expr, i);
             }
         }
@@ -698,6 +721,7 @@ bool Expr::setInfoDirty() {
     //MNN_PRINT("Set Info Dirty for %s\n", mName.c_str());
     mInside->mInfoDirty    = true;
     mInside->mContentDirty = true;
+    // 当前不可用所以可以input ？
     mValid = true;
     if (mInside->mCache != nullptr) {
         Executor::setShapeDirty(mInside->mCache.get());
