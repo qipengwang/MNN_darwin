@@ -146,7 +146,7 @@ Tensor* Tensor::create(const std::vector<int>& dims, halide_type_t type, void* u
     shapeTensor.buffer().type = type;
 
     bool ownData = userData == nullptr;
-    printf("ownData = %d\n", ownData);
+//    printf("ownData = %d\n", ownData);
     auto result  = new Tensor(&shapeTensor, dimType, ownData);
     if (nullptr != userData) {
         result->buffer().host = (uint8_t*)userData;

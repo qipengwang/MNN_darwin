@@ -71,7 +71,7 @@ template void CPUConvolution::reorderWeightSlow<int8_t>(int8_t*, const int8_t*, 
 
 template<typename T, typename U> // T -> U
 bool CPUConvolution::acquireMemoryAndCopy(std::shared_ptr<Tensor> dest, const T* source, size_t count, Backend* backend) {
-    MNN_PRINT("call %s in %s in line %d\n", __FUNCTION__, __FILE_NAME__, __LINE__);
+    MNN_PRINT("call %s in %s in line %d\n", __FUNCTION__, __FILE__, __LINE__);
     // MNIST 和 MobileNetV2 没有调用这个函数？
     bool allocRes = ((CPUBackend*)backend)->onAcquireBuffer(dest.get(), Backend::STATIC);
     if (!allocRes) {

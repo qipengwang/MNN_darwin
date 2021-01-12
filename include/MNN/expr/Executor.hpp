@@ -20,7 +20,7 @@ namespace MNN {
 //或者就是告诉下面定义的executor有这些类
 class Backend;
 class Execution;
-class Runtime;
+class Runtime; // backend.hpp
 struct Op;
 namespace Express {
 class MNN_PUBLIC Executor {

@@ -68,7 +68,7 @@ class Session;
 struct Content;
 class Tensor;
 class Backend;
-class Runtime;
+class Runtime; // Backend.hpp
 
 class MNN_PUBLIC OperatorInfo {
     struct Info;

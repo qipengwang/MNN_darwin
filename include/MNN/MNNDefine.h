@@ -11,6 +11,8 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -60,5 +62,42 @@ MNN_ERROR("Check failed: %s ==> %s\n", #success, #log); \
 #else
 #define MNN_PUBLIC __attribute__((visibility("default")))
 #endif
+
+//memory profiler
+#ifdef __linux__
+#define MNN_MEMORY_PROFILE \
+    {                          \
+        char s[200];          \
+        sprintf(s, "/proc/%d/stat", getpid()); \
+        FILE* fin = fopen(s, "r");              \
+        if(fin) {               \
+            fgets(s, 100, fin); \
+            FILE* fout = fopen("memory_profile.out", "w"); \
+            if(fout) {         \
+                fprintf(fout, s);              \
+                strcat(s, "\n");           \
+                fclose(fout);           \
+            }                  \
+            fclose(fin);\
+        }\
+    }
+#else
+#define MNN_MEMORY_PROFILE \
+    {                          \
+        char s[200];          \
+        sprintf(s, "/proc/%d/stat", getpid()); \
+        FILE* fin = fopen(s, "r");              \
+        if(fin) {               \
+            fgets(s, 100, fin); \
+            FILE* fout = fopen("memory_profile.out", "w"); \
+            if(fout) {         \
+                fprintf(fout, s);              \
+                strcat(s, "\n");           \
+                fclose(fout);           \
+            }                  \
+            fclose(fin);\
+        }\
+    }
+#endif // MNN_MEMORY_PROFILE
 
 #endif /* MNNDefine_h */

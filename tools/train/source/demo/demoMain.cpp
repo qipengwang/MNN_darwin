@@ -9,6 +9,7 @@
 #include <MNN/MNNDefine.h>
 #include "DemoUnit.hpp"
 int main(int argc, const char* argv[]) {
+//    printf("%s", __FILE_NAME__);
     if (argc < 2) {
         MNN_ERROR("Usage: ./runTrainDemo.out CASENAME [ARGS]\n");
         auto& list = DemoUnitSet::get()->list();
@@ -24,6 +25,11 @@ int main(int argc, const char* argv[]) {
         MNN_ERROR("Can't find demo %s\n", argv[1]);
         return 0;
     }
+#ifdef __linux__
+    printf("host is linux\n");
+#else
+    printf("host is MacOS\n");
+#endif
     demo->run(argc - 1, argv + 1);
     return 0;
 }

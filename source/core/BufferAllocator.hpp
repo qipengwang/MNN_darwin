@@ -88,6 +88,7 @@ private:
     public:
         ~Node();
         void* pointer;
+        //binary tree / linked list's parent node
         std::shared_ptr<Node> parent = nullptr;
         int32_t size;
         int16_t useCount = 0;
