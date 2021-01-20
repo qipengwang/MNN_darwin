@@ -291,6 +291,7 @@ ErrorCode Executor::ComputeCache::compute() {
     }
     for (auto& c : mInputInside) {
         if (c->mContentDirty) {
+            // InputType = VARP::INPUT
             return CALL_BACK_STOP;
         }
     }

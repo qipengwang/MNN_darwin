@@ -13,6 +13,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
+#if defined(_MSC_VER)
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -65,16 +71,16 @@ MNN_ERROR("Check failed: %s ==> %s\n", #success, #log); \
 
 //memory profiler
 #ifdef __linux__
-#define MNN_MEMORY_PROFILE \
+#define MNN_MEMORY_PROFILE(extra) \
     {                          \
         char s[200];          \
-        sprintf(s, "/proc/%d/stat", getpid()); \
+        sprintf(s, "/proc/%d/statm", getpid()); \
         FILE* fin = fopen(s, "r");              \
         if(fin) {               \
             fgets(s, 100, fin); \
-            FILE* fout = fopen("memory_profile.out", "w"); \
+            FILE* fout = fopen("memory_profile.out", "a"); \
             if(fout) {         \
-                fprintf(fout, s);              \
+                fprintf(fout, "%s\t%llu\t%s", extra, MNN_TIME(), s);              \
                 strcat(s, "\n");           \
                 fclose(fout);           \
             }                  \
@@ -82,22 +88,14 @@ MNN_ERROR("Check failed: %s ==> %s\n", #success, #log); \
         }\
     }
 #else
-#define MNN_MEMORY_PROFILE \
-    {                          \
-        char s[200];          \
-        sprintf(s, "/proc/%d/stat", getpid()); \
-        FILE* fin = fopen(s, "r");              \
-        if(fin) {               \
-            fgets(s, 100, fin); \
-            FILE* fout = fopen("memory_profile.out", "w"); \
-            if(fout) {         \
-                fprintf(fout, s);              \
-                strcat(s, "\n");           \
-                fclose(fout);           \
-            }                  \
-            fclose(fin);\
-        }\
-    }
+#define MNN_MEMORY_PROFILE(extra)
 #endif // MNN_MEMORY_PROFILE
+
+inline uint64_t MNN_TIME() {
+    struct timeval Current;
+    gettimeofday(&Current, nullptr);
+    uint64_t ret_time = Current.tv_sec * 1000000 + Current.tv_usec;
+    return ret_time;
+}
 
 #endif /* MNNDefine_h */

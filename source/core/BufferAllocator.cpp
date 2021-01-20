@@ -89,6 +89,7 @@ void BufferAllocator::returnMemory(FREELIST* listP, std::shared_ptr<Node> node, 
 }
 
 bool BufferAllocator::free(void* pointer, bool needRelease) {
+    // seems that needRelease is always false, means returning the memory to pool
     // get node
     auto x = mUsedList.find(pointer);
     if (x == mUsedList.end()) {
