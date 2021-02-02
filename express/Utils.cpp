@@ -98,7 +98,7 @@ bool Utils::allocMemoryForHostTensor(Tensor* dest) {
         return false;
     }
     dest->buffer().host = (uint8_t*)MNNMemoryAllocAlign(size, MNN_MEMORY_ALIGN_DEFAULT);
-    MNN_MEMORY_PROFILE
+    MNN_MEMORY_PROFILE("")
     return dest->buffer().host != nullptr;
 }
 bool Utils::releaseMemoryForHostTensor(Tensor* dest) {
@@ -110,7 +110,7 @@ bool Utils::releaseMemoryForHostTensor(Tensor* dest) {
     }
     MNNMemoryFreeAlign(dest->buffer().host);
     dest->buffer().host = nullptr;
-    MNN_MEMORY_PROFILE
+    MNN_MEMORY_PROFILE("")
     return true;
 }
 

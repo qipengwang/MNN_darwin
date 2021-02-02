@@ -18,6 +18,7 @@
 using namespace std;
 
 namespace MNN {
+int Tensor::uniqueID = 0;
 Tensor::Tensor(int dimSize, DimensionType type) {
 //    MNN_PRINT("call %s without memory alloc\n", __FUNCTION__);
     MNN_ASSERT(dimSize <= MNN_MAX_TENSOR_DIM);
@@ -27,6 +28,7 @@ Tensor::Tensor(int dimSize, DimensionType type) {
     mBuffer.device     = 0;
     mBuffer.host       = nullptr;
     mBuffer.dim        = &mDescribe->dims[0];
+    mID = uniqueID++;
 
     switch (type) {
         case CAFFE:
@@ -54,6 +56,7 @@ Tensor::Tensor(const Tensor* tensor, DimensionType type, bool allocMemory) {
     mBuffer.device     = 0;
     mBuffer.host       = nullptr;
     mBuffer.dim        = &mDescribe->dims[0];
+    mID = uniqueID++;
 
     for (int i = 0; i < buffer.dimensions; ++i) {
         mBuffer.dim[i].extent = buffer.dim[i].extent;

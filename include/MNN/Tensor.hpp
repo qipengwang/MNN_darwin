@@ -255,6 +255,9 @@ public:
     inline void setLength(int index, int length) {
         mBuffer.dim[index].extent = length;
     }
+    inline const int ID() const {
+        return mID;
+    }
 
 public:
     /**
@@ -270,6 +273,10 @@ public:
 private:
     halide_buffer_t mBuffer;
     struct InsideDescribe* mDescribe;
+    int mID = -1;
+
+private:
+    static int uniqueID;
 
 private:
     friend class TensorUtils;

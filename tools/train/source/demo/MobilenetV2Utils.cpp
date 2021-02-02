@@ -5,7 +5,6 @@
 //  Created by MNN on 2020/01/08.
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
-#define DEBUG
 #include "MobilenetV2Utils.hpp"
 #include <MNN/expr/Executor.hpp>
 #include <MNN/expr/Optimizer.hpp>
@@ -140,7 +139,7 @@ void MobilenetV2Utils::train(std::shared_ptr<Module> model, const int numClasses
 //                return;
                 solver->step(loss);
                 MNN_PRINT("finish one iteration\n");
-                return;
+//                return;
             }
         }
 
